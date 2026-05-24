@@ -583,7 +583,7 @@ export default function FoodQuiz() {
     if (sharing) return;
     setSharing(true);
 
-    const text = `วันนี้ฉันควรกิน: ${resultMenu?.name}\n${getCategoryName(resultMenu?.category || "")}\n\n${resultMenu?.reason}\n\nลองเล่นเกมหา: https://kinraidee.vercel.app`;
+    const text = `วันนี้ฉันควรกิน: ${resultMenu?.name}\n${getCategoryName(resultMenu?.category || "")}\n\n${resultMenu?.reason}\n\nลองเล่นเกมหา: https://kinraid.netlify.app`;
     
     try {
       if (typeof navigator !== 'undefined' && resultRef.current) {
@@ -766,7 +766,7 @@ export default function FoodQuiz() {
                 {/* Minimalist Watermark */}
                 <div className="mt-8 pt-6 border-t border-gray-50 flex items-center justify-center gap-2 opacity-30">
                   <div className="w-4 h-4"><AppLogo /></div>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-gray-900">Kinraidee App</p>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-gray-900">kinraid.netlify.app</p>
                 </div>
               </div>
 
