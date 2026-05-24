@@ -714,14 +714,10 @@ export default function FoodQuiz() {
               >
                 เริ่มหาของกิน
               </button>
-
-              <p className="mt-12 text-xs font-bold text-gray-300 uppercase tracking-widest">
-                Version 2.0 • Minimalist Edition
-              </p>
             </div>
           ) : showResult && resultMenu ? (
-          /* หน้าแสดงผลลัพธ์ */
-          <div className="flex-1 flex flex-col min-h-0 animate-slide-up">
+            /* หน้าแสดงผลลัพธ์ */
+            <div className="flex-1 flex flex-col min-h-0 animate-slide-up">
             {/* Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto p-6 pb-32">
               {/* ส่วนแสดงผล (จะถูก Capture เป็นการ์ด) */}
