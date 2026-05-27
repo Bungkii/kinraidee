@@ -18,16 +18,6 @@ interface Menu {
 type ScoreCategory = "spicy" | "comfort" | "heavy" | "light";
 
 // SVG Icons
-const ShareIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="18" cy="5" r="3" />
-    <circle cx="6" cy="12" r="3" />
-    <circle cx="18" cy="19" r="3" />
-    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-  </svg>
-);
-
 const DownloadIcon = () => (
   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -532,11 +522,11 @@ const getCategoryName = (category: string) => {
 
 export default function FoodQuiz() {
   const [quizStarted, setQuizStarted] = useState(false);
+  const [showCollection, setShowCollection] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [scores, setScores] = useState({ spicy: 0, comfort: 0, heavy: 0, light: 0 });
   const [showResult, setShowResult] = useState(false);
   const [resultMenu, setResultMenu] = useState<Menu | null>(null);
-  const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [saving, setSaving] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -579,62 +569,6 @@ export default function FoodQuiz() {
     setShowResult(true);
   };
 
-  const handleShare = async () => {
-    if (sharing) return;
-    setSharing(true);
-
-    const text = `วันนี้ฉันควรกิน: ${resultMenu?.name}\n${getCategoryName(resultMenu?.category || "")}\n\n${resultMenu?.reason}\n\nลองเล่นเกมหา: https://kinraid.netlify.app`;
-    
-    try {
-      if (typeof navigator !== 'undefined' && resultRef.current) {
-        const htmlToImage = await import("html-to-image");
-        const blob = await htmlToImage.toBlob(resultRef.current, { 
-          pixelRatio: 2, 
-          backgroundColor: "#ffffff",
-          cacheBust: true,
-        });
-        
-        if (blob) {
-          const file = new File([blob], `kinraidee-${resultMenu?.name}.png`, { type: 'image/png' });
-          const shareData = { 
-            title: "วันนี้กินอะไรดี?", 
-            text: text, 
-            files: [file] 
-          };
-
-          if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-            await navigator.share(shareData);
-            setSharing(false);
-            return;
-          }
-        }
-      }
-    } catch (err) {
-      console.error("Image share failed, falling back to text", err);
-    }
-
-    // Fallback to text or clipboard
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: "วันนี้กินอะไรดี?",
-          text: text
-        });
-      } catch (err) {
-        console.log("Share cancelled");
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      } catch (err) {
-        console.error("Clipboard failed", err);
-      }
-    }
-    setSharing(false);
-  };
-
   const handleDownload = async () => {
     if (saving || !resultRef.current) return;
     setSaving(true);
@@ -663,6 +597,12 @@ export default function FoodQuiz() {
     setResultMenu(null);
   };
 
+  const goHome = () => {
+    setQuizStarted(false);
+    setShowCollection(false);
+    resetQuiz();
+  };
+
   return (
     <div className="min-h-screen bg-[#F1F5F9] flex flex-col items-center justify-center lg:p-8 font-sans">
       <div className="w-full max-w-md lg:max-w-5xl bg-white min-h-screen lg:min-h-[700px] lg:h-[700px] lg:rounded-[3rem] shadow-2xl shadow-slate-200 overflow-hidden relative flex flex-col lg:flex-row">
@@ -670,7 +610,7 @@ export default function FoodQuiz() {
         {/* Left Side Panel - Desktop Only */}
         <div className="hidden lg:flex lg:w-1/2 bg-[#F8FAFC] items-center justify-center p-16 border-r border-gray-100 relative overflow-hidden">
           <div className="relative z-10 w-full max-w-sm animate-fade-in transition-all duration-700 ease-in-out">
-            {!quizStarted ? (
+            {!quizStarted && !showCollection ? (
               <div className="scale-125 hover:scale-[1.3] transition-transform duration-1000">
                 <AppLogo />
               </div>
@@ -691,11 +631,22 @@ export default function FoodQuiz() {
         {/* Right Side Panel - Main Interactive Area */}
         <div className="flex-1 flex flex-col relative w-full lg:w-1/2">
           
-          {!quizStarted ? (
+          {/* Mobile Back Button (Logo) */}
+          {(quizStarted || showCollection) && (
+            <div className="absolute top-5 left-6 z-20">
+              <button 
+                onClick={goHome}
+                className="w-10 h-10 drop-shadow-md active:scale-95 transition-all lg:hover:rotate-12"
+              >
+                <AppLogo />
+              </button>
+            </div>
+          )}
+
+          {!quizStarted && !showCollection ? (
             /* หน้าแรก (Landing Page) */
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center animate-fade-in">
               <div className="w-full flex flex-col items-center justify-center mb-12">
-                {/* Logo visible on all devices now, but smaller on desktop to complement the large side logo */}
                 <div className="w-36 h-36 lg:w-32 lg:h-32 mb-10 drop-shadow-2xl">
                   <AppLogo />
                 </div>
@@ -704,163 +655,188 @@ export default function FoodQuiz() {
                 </h1>
               </div>
               
-              <p className="text-xl text-gray-400 mb-16 max-w-[280px] mx-auto leading-relaxed font-bold italic">
+              <p className="text-xl text-gray-400 mb-12 max-w-[280px] mx-auto leading-relaxed font-bold italic">
                 "The most powerful tool to end your lunch dilemma."
               </p>
               
-              <button
-                onClick={() => setQuizStarted(true)}
-                className="w-full px-12 py-6 bg-[#F97316] text-white text-2xl font-black rounded-3xl hover:bg-[#EA580C] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-orange-100"
-              >
-                เริ่มหาของกิน
-              </button>
+              <div className="w-full flex flex-col gap-4">
+                <button
+                  onClick={() => setQuizStarted(true)}
+                  className="w-full px-12 py-6 bg-[#F97316] text-white text-2xl font-black rounded-3xl hover:bg-[#EA580C] transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-orange-100"
+                >
+                  เริ่มหาของกิน
+                </button>
+                
+                <button
+                  onClick={() => setShowCollection(true)}
+                  className="w-full px-12 py-4 bg-white text-gray-400 text-lg font-black rounded-3xl border-2 border-gray-100 hover:bg-gray-50 hover:text-gray-600 transition-all active:scale-[0.98]"
+                >
+                  ดูเมนูทั้งหมด ({menus.length})
+                </button>
+              </div>
+            </div>
+          ) : showCollection ? (
+            /* หน้าแสดงคอลเลกชันเมนู */
+            <div className="flex-1 flex flex-col min-h-0 animate-fade-in">
+              <div className="pt-20 px-8 pb-4">
+                <h2 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">Collection</h2>
+                <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Total {menus.length} delicious menus</p>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto px-8 pb-12 pt-4">
+                <div className="grid grid-cols-1 gap-6">
+                  {menus.map((menu, index) => (
+                    <div key={index} className="bg-white rounded-[2.5rem] p-6 border border-gray-50 shadow-sm flex flex-col items-center text-center group hover:shadow-md transition-all duration-300">
+                      <div className="w-full max-w-[140px] mb-6 group-hover:scale-105 transition-transform duration-500">
+                        {getMenuArt(menu as unknown as Menu)}
+                      </div>
+                      <h3 className="text-2xl font-black text-gray-900 mb-3 tracking-tight">{menu.name}</h3>
+                      <div className="bg-gray-50 px-6 py-4 rounded-2xl border border-gray-50 w-full">
+                        <p className="text-gray-500 text-xs leading-relaxed font-bold">{menu.reason}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Sticky bottom hint */}
+              <div className="p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 text-center">
+                <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Tap logo to go back</p>
+              </div>
             </div>
           ) : showResult && resultMenu ? (
             /* หน้าแสดงผลลัพธ์ */
             <div className="flex-1 flex flex-col min-h-0 animate-slide-up">
-            {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto p-6 pb-32">
-              {/* ส่วนแสดงผล (จะถูก Capture เป็นการ์ด) */}
-              <div ref={resultRef} className="bg-white rounded-[2rem] p-8 text-center border border-gray-100 shadow-sm mb-6">
-                <div className="mb-4">
-                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em]">Perfect Match</p>
-                </div>
+              {/* Scrollable Content Area */}
+              <div className="flex-1 overflow-y-auto p-6 pb-32">
+                {/* ส่วนแสดงผล (จะถูก Capture เป็นการ์ด) */}
+                <div ref={resultRef} className="bg-white rounded-[2rem] p-8 text-center border border-gray-100 shadow-sm mb-6">
+                  <div className="mb-4">
+                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.3em]">Perfect Match</p>
+                  </div>
 
-                {/* Category Art - Hidden on PC as it's shown in the left panel */}
-                <div className="mb-8 flex justify-center lg:hidden">
-                  <div className="w-full max-w-[200px]">
-                    {getMenuArt(resultMenu)}
+                  {/* Category Art - Hidden on PC as it's shown in the left panel */}
+                  <div className="mb-8 flex justify-center lg:hidden">
+                    <div className="w-full max-w-[200px]">
+                      {getMenuArt(resultMenu)}
+                    </div>
+                  </div>
+
+                  {/* Menu Name */}
+                  <div className="mb-8">
+                    <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">
+                      {resultMenu.name}
+                    </h1>
+                    <div className="h-1 w-10 bg-orange-500 mx-auto rounded-full opacity-30"></div>
+                  </div>
+
+                  {/* Reason */}
+                  <div className="bg-gray-50 p-6 rounded-3xl border border-gray-50 mb-8">
+                    <p className="text-gray-900 font-black mb-2 text-sm">Why this dish?</p>
+                    <p className="text-gray-500 text-sm leading-relaxed font-bold">{resultMenu.reason}</p>
+                  </div>
+
+                  {/* Simplified Score Summary inside card */}
+                  <div className="flex justify-between items-center px-2">
+                    <div className="flex flex-col items-center">
+                      <SpicyIcon /><span className="text-xs font-black mt-1">{scores.spicy}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <ComfortIcon /><span className="text-xs font-black mt-1">{scores.comfort}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <HeavyIcon /><span className="text-xs font-black mt-1">{scores.heavy}</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <LightIcon /><span className="text-xs font-black mt-1">{scores.light}</span>
+                    </div>
+                  </div>
+
+                  {/* Minimalist Watermark */}
+                  <div className="mt-8 pt-6 border-t border-gray-50 flex items-center justify-center gap-2 opacity-30">
+                    <div className="w-4 h-4"><AppLogo /></div>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-gray-900">kinraid.netlify.app</p>
                   </div>
                 </div>
 
-                {/* Menu Name */}
-                <div className="mb-8">
-                  <h1 className="text-4xl font-black text-gray-900 mb-2 tracking-tight">
-                    {resultMenu.name}
-                  </h1>
-                  <div className="h-1 w-10 bg-orange-500 mx-auto rounded-full opacity-30"></div>
-                </div>
-
-                {/* Reason */}
-                <div className="bg-gray-50 p-6 rounded-3xl border border-gray-50 mb-8">
-                  <p className="text-gray-900 font-black mb-2 text-sm">Why this dish?</p>
-                  <p className="text-gray-500 text-sm leading-relaxed font-bold">{resultMenu.reason}</p>
-                </div>
-
-                {/* Simplified Score Summary inside card */}
-                <div className="flex justify-between items-center px-2">
-                  <div className="flex flex-col items-center">
-                    <SpicyIcon /><span className="text-xs font-black mt-1">{scores.spicy}</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <ComfortIcon /><span className="text-xs font-black mt-1">{scores.comfort}</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <HeavyIcon /><span className="text-xs font-black mt-1">{scores.heavy}</span>
-                  </div>
-                  <div className="flex flex-col items-center">
-                    <LightIcon /><span className="text-xs font-black mt-1">{scores.light}</span>
-                  </div>
-                </div>
-
-                {/* Minimalist Watermark */}
-                <div className="mt-8 pt-6 border-t border-gray-50 flex items-center justify-center gap-2 opacity-30">
-                  <div className="w-4 h-4"><AppLogo /></div>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-gray-900">kinraid.netlify.app</p>
+                {/* Extra content outside card to encourage scrolling */}
+                <div className="px-4 text-center">
+                  <p className="text-gray-400 text-xs font-bold leading-relaxed">
+                    "Don't forget to take a picture of your food and tag us! Enjoy your delicious meal."
+                  </p>
                 </div>
               </div>
 
-              {/* Extra content outside card to encourage scrolling */}
-              <div className="px-4 text-center">
-                <p className="text-gray-400 text-xs font-bold leading-relaxed">
-                  "Don't forget to take a picture of your food and tag us! Enjoy your delicious meal."
-                </p>
-              </div>
-            </div>
-
-            {/* Sticky Bottom Action Bar */}
-            <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-3">
-              <button
-                onClick={handleShare}
-                disabled={sharing}
-                className="flex-[2] flex items-center justify-center gap-2 py-4 bg-[#F97316] text-white font-black rounded-2xl hover:bg-[#EA580C] transition-all shadow-lg shadow-orange-100 active:scale-95 disabled:opacity-50"
-              >
-                {sharing ? (
-                  <span className="text-sm animate-pulse">SHARING...</span>
-                ) : (
-                  <>
-                    <ShareIcon /> <span className="text-sm">{copied ? 'COPIED!' : 'SHARE'}</span>
-                  </>
-                )}
-              </button>
-              <button
-                onClick={handleDownload}
-                disabled={saving}
-                className="flex-1 flex items-center justify-center py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-black transition-all active:scale-95 disabled:opacity-50"
-                title="Save Image"
-              >
-                {saving ? (
-                  <span className="text-xs animate-pulse">SAVING...</span>
-                ) : (
-                  <DownloadIcon />
-                )}
-              </button>
-              <button
-                onClick={resetQuiz}
-                disabled={sharing || saving}
-                className="flex-1 flex items-center justify-center py-4 bg-white text-gray-400 font-black border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-30"
-                title="Restart"
-              >
-                <RefreshIcon />
-              </button>
-            </div>
-          </div>
-        ) : (
-          /* หน้าควิซคำถาม */
-          <div className="flex-1 flex flex-col min-h-0 animate-fade-in relative">
-            {/* Pinned Progress Bar */}
-            <div className="pt-10 px-8 pb-4 bg-white/50 backdrop-blur-sm z-10">
-              <div className="flex justify-between items-end mb-3">
-                <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Question {currentQuestion + 1} of {questions.length}</p>
-                <span className="text-xl font-black text-gray-900 leading-none">
-                  {Math.round(((currentQuestion + 1) / questions.length) * 100)}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                <div 
-                  className="bg-[#F97316] h-full rounded-full transition-all duration-700 ease-out"
-                  style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
-                ></div>
+              {/* Sticky Bottom Action Bar */}
+              <div className="absolute bottom-0 left-0 right-0 p-6 bg-white/80 backdrop-blur-xl border-t border-gray-100 flex gap-3">
+                <button
+                  onClick={handleDownload}
+                  disabled={saving}
+                  className="flex-1 flex items-center justify-center py-4 bg-gray-900 text-white font-black rounded-2xl hover:bg-black transition-all active:scale-95 disabled:opacity-50"
+                  title="Save Image"
+                >
+                  {saving ? (
+                    <span className="text-xs animate-pulse">SAVING...</span>
+                  ) : (
+                    <DownloadIcon />
+                  )}
+                </button>
+                <button
+                  onClick={resetQuiz}
+                  disabled={saving}
+                  className="flex-1 flex items-center justify-center py-4 bg-white text-gray-400 font-black border border-gray-200 rounded-2xl hover:bg-gray-50 transition-all active:scale-95 disabled:opacity-30"
+                  title="Restart"
+                >
+                  <RefreshIcon />
+                </button>
               </div>
             </div>
-
-            {/* Question & Answers */}
-            <div className="flex-1 overflow-y-auto px-8 pb-12 pt-4">
-              <h2 className="text-3xl font-black text-gray-900 mb-10 leading-[1.15] tracking-tight">
-                {questions[currentQuestion].question}
-              </h2>
-
-              <div className="grid gap-3">
-                {questions[currentQuestion].answers.map((answer, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleAnswer(answer.type as ScoreCategory)}
-                    className="w-full p-6 bg-gray-50 border border-transparent rounded-[1.5rem] text-left hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 font-bold text-gray-700 active:scale-[0.97] group"
-                  >
-                    <span className="group-hover:text-orange-600 transition-colors">
-                      {answer.text}
-                    </span>
-                  </button>
-                ))}
+          ) : (
+            /* หน้าควิซคำถาม */
+            <div className="flex-1 flex flex-col min-h-0 animate-fade-in relative">
+              {/* Pinned Progress Bar */}
+              <div className="pt-10 px-8 pb-4 bg-white/50 backdrop-blur-sm z-10">
+                <div className="flex justify-between items-end mb-3">
+                  <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">Question {currentQuestion + 1} of {questions.length}</p>
+                  <span className="text-xl font-black text-gray-900 leading-none">
+                    {Math.round(((currentQuestion + 1) / questions.length) * 100)}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-[#F97316] h-full rounded-full transition-all duration-700 ease-out"
+                    style={{ width: `${((currentQuestion + 1) / questions.length) * 100}%` }}
+                  ></div>
+                </div>
               </div>
-            </div>
 
-            {/* Subtle App Indicator at bottom */}
-            <div className="h-2 w-24 bg-gray-100 mx-auto mb-4 rounded-full"></div>
-          </div>
-        )}
+              {/* Question & Answers */}
+              <div className="flex-1 overflow-y-auto px-8 pb-12 pt-4">
+                <h2 className="text-3xl font-black text-gray-900 mb-10 leading-[1.15] tracking-tight">
+                  {questions[currentQuestion].question}
+                </h2>
+
+                <div className="grid gap-3">
+                  {questions[currentQuestion].answers.map((answer, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleAnswer(answer.type as ScoreCategory)}
+                      className="w-full p-6 bg-gray-50 border border-transparent rounded-[1.5rem] text-left hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 font-bold text-gray-700 active:scale-[0.97] group"
+                    >
+                      <span className="group-hover:text-orange-600 transition-colors">
+                        {answer.text}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Subtle App Indicator at bottom */}
+              <div className="h-2 w-24 bg-gray-100 mx-auto mb-4 rounded-full"></div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
 }
