@@ -575,14 +575,14 @@ export default function FoodQuiz() {
 
     try {
       const htmlToImage = await import("html-to-image");
-      const dataUrl = await htmlToImage.toPng(resultRef.current, { 
+      const dataUrl = await htmlToImage.toSvg(resultRef.current, { 
         pixelRatio: 2, 
         backgroundColor: "#ffffff",
         cacheBust: true,
       });
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = `kinraidee-${resultMenu?.name}.png`;
+      link.download = `kinraidee-${resultMenu?.name}.svg`;
       link.click();
     } catch (err) {
       console.error("Download failed", err);
